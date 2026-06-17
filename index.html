@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Cadastro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .screen { display: none; width: 100%; min-height: 100vh; }
+  .screen.active { display: flex; }
+
+  #login-screen { align-items: center; justify-content: center; padding: 2rem; }
+  .login-box { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 2rem 2.5rem; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .login-logo { text-align: center; margin-bottom: 1.5rem; }
+  .login-logo .icon-wrap { width: 52px; height: 52px; background: #521863; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; }
+  .login-logo .icon-wrap svg { width: 28px; height: 28px; fill: white; }
+  .login-logo h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+  .login-logo p { font-size: 13px; color: #888; margin-top: 3px; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-weight: 500; }
+  .form-group input { width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
+  .form-group input:focus { border-color: #521863; box-shadow: 0 0 0 2px rgba(82,24,99,0.15); }
+  .btn-primary { width: 100%; padding: 10px; background: #521863; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+  .btn-primary:hover { background: #3c1149; }
+  .login-error { font-size: 12px; color: #c0392b; margin-top: 0.5rem; text-align: center; display: none; }
+  .login-hint { font-size: 11px; color: #aaa; text-align: center; margin-top: 1rem; }
+
+  #app-screen { flex-direction: column; }
+  .topbar { background: #521863; color: white; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-title { font-size: 15px; font-weight: 600; }
+  .topbar-user { font-size: 12px; opacity: 0.85; display: flex; align-items: center; gap: 8px; }
+  .btn-logout { background: rgba(255,255,255,0.15); border: none; color: white; font-size: 12px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .btn-logout:hover { background: rgba(255,255,255,0.3); }
+  .tabs { background: white; border-bottom: 1px solid #e0e0e0; display: flex; padding: 0 1.5rem; }
+  .tab { padding: 0.75rem 1rem; font-size: 14px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: #521863; border-bottom-color: #521863; font-weight: 600; }
+  .content { flex: 1; padding: 1.5rem; overflow-y: auto; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .search-bar { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .search-bar input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
+  .search-bar input:focus { border-color: #521863; }
+  .btn-novo { padding: 8px 16px; background: #521863; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; font-weight: 500; }
+  .pessoas-table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
+  .pessoas-table th { text-align: left; padding: 10px 14px; color: #666; font-weight: 600; border-bottom: 1px solid #e0e0e0; background: #fafafa; font-size: 12px; }
+  .pessoas-table td { padding: 11px 14px; border-bottom: 1px solid #f0f0f0; color: #333; }
+  .pessoas-table tr:last-child td { border-bottom: none; }
+  .pessoas-table tr:hover td { background: #f9f5fb; cursor: pointer; }
+  .badge-status { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: #e1f5ee; color: #0f6e56; font-weight: 500; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: #aaa; font-size: 14px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; }
+
+  .form-card { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.5rem; max-width: 700px; }
+  .form-section-title { font-size: 13px; font-weight: 600; color: #521863; margin: 1.25rem 0 0.75rem; border-bottom: 1px solid #f0e6f6; padding-bottom: 5px; }
+  .form-row { display: grid; gap: 12px; margin-bottom: 12px; }
+  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .f-group label { display: block; font-size: 12px; color: #666; margin-bottom: 3px; font-weight: 500; }
+  .f-group input, .f-group select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none; }
+  .f-group input:focus, .f-group select:focus { border-color: #521863; box-shadow: 0 0 0 2px rgba(82,24,99,0.1); }
+  .form-actions { display: flex; gap: 8px; margin-top: 1.25rem; justify-content: flex-end; }
+  .btn-salvar { padding: 9px 22px; background: #521863; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-salvar:hover { background: #3c1149; }
+  .btn-cancelar { padding: 9px 16px; background: transparent; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; cursor: pointer; color: #666; }
+  .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 1rem; display: none; }
+  .alert.success { background: #e1f5ee; color: #0f6e56; }
+  .alert.error { background: #fdecea; color: #c0392b; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 10px; border: 1px solid #e0e0e0; width: 100%; max-width: 480px; padding: 1.5rem; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; }
+  .btn-fechar { background: none; border: none; cursor: pointer; color: #aaa; font-size: 22px; line-height: 1; }
+  .detail-row { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: #888; min-width: 130px; }
+  .detail-value { color: #333; }
+  .btn-excluir { margin-top: 1rem; padding: 8px 16px; background: #fdecea; color: #c0392b; border: 1px solid #f5c6c6; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; font-weight: 500; }
+  .btn-excluir:hover { background: #fad2d0; }
+
+  .config-banner { background: #fef9e7; border: 1px solid #f9ca24; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #7d6608; margin-bottom: 1rem; }
+  .config-banner code { background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+
+  @media (max-width: 600px) {
+    .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
+    .pessoas-table th:nth-child(3), .pessoas-table td:nth-child(3),
+    .pessoas-table th:nth-child(4), .pessoas-table td:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== TELA DE LOGIN ========== -->
+<div id="login-screen" class="screen active">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      </div>
+      <h1>Sistema de Cadastro</h1>
+      <p>Acesso restrito a operadores</p>
+    </div>
+    <div class="form-group">
+      <label>Usuário</label>
+      <input type="text" id="login-user" placeholder="operador" />
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••" />
+    </div>
+    <button class="btn-primary" onclick="fazerLogin()">Entrar</button>
+    <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
+    <div class="login-hint">operador / 1234 &nbsp;·&nbsp; admin / admin123</div>
+  </div>
+</div>
+
+<!-- ========== TELA DO APP ========== -->
+<div id="app-screen" class="screen">
+  <div class="topbar">
+    <span class="topbar-title">Sistema de Cadastro</span>
+    <div class="topbar-user">
+      <span id="topbar-nome">operador</span>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="trocarAba('lista')">Pessoas</div>
+    <div class="tab" onclick="trocarAba('cadastro')">Novo cadastro</div>
+  </div>
+  <div class="content">
+
+    <!-- ABA LISTA -->
+    <div id="tab-lista" class="tab-pane active">
+      <div class="config-banner" id="config-banner">
+        ⚠️ Configure o Supabase: substitua <code>SUA_URL_AQUI</code> e <code>SUA_CHAVE_ANON_AQUI</code> no código pelas suas credenciais reais.
+      </div>
+      <div class="search-bar">
+        <input type="text" id="busca" placeholder="Buscar por nome ou CPF..." oninput="filtrarPessoas()" />
+        <button class="btn-novo" onclick="trocarAba('cadastro')">+ Nova pessoa</button>
+      </div>
+      <table class="pessoas-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>RG</th>
+            <th>Telefone</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-body"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none">Nenhuma pessoa cadastrada ainda.</div>
+    </div>
+
+    <!-- ABA CADASTRO -->
+    <div id="tab-cadastro" class="tab-pane">
+      <div class="form-card">
+        <div class="alert" id="form-alert"></div>
+
+        <div class="form-section-title">Dados pessoais</div>
+        <div class="form-row cols-2">
+          <div class="f-group"><label>Nome completo *</label><input type="text" id="f-nome" /></div>
+          <div class="f-group"><label>CPF *</label><input type="text" id="f-cpf" placeholder="000.000.000-00" maxlength="14" oninput="mascaraCPF(this)" /></div>
+        </div>
+        <div class="form-row cols-3">
+          <div class="f-group"><label>RG *</label><input type="text" id="f-rg" placeholder="00.000.000-0" maxlength="12" oninput="mascaraRG(this)" /></div>
+          <div class="f-group"><label>Data de nascimento</label><input type="date" id="f-nascimento" /></div>
+          <div class="f-group"><label>Sexo</label>
+            <select id="f-sexo">
+              <option value="">Selecione</option>
+              <option>Masculino</option>
+              <option>Feminino</option>
+              <option>Outro</option>
+              <option>Prefiro não informar</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section-title">Contato</div>
+        <div class="form-row cols-2">
+          <div class="f-group"><label>Telefone</label><input type="text" id="f-telefone" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTel(this)" /></div>
+          <div class="f-group"><label>E-mail</label><input type="email" id="f-email" /></div>
+        </div>
+
+        <div class="form-section-title">Endereço</div>
+        <div class="form-row cols-3">
+          <div class="f-group"><label>CEP</label><input type="text" id="f-cep" placeholder="00000-000" maxlength="9" oninput="mascaraCEP(this)" onblur="buscarCEP()" /></div>
+          <div class="f-group" style="grid-column: span 2"><label>Logradouro</label><input type="text" id="f-logradouro" /></div>
+        </div>
+        <div class="form-row cols-3">
+          <div class="f-group"><label>Número</label><input type="text" id="f-numero" /></div>
+          <div class="f-group"><label>Bairro</label><input type="text" id="f-bairro" /></div>
+          <div class="f-group"><label>Complemento</label><input type="text" id="f-complemento" /></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="f-group"><label>Cidade</label><input type="text" id="f-cidade" /></div>
+          <div class="f-group"><label>UF</label><input type="text" id="f-uf" maxlength="2" /></div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-cancelar" onclick="trocarAba('lista')">Cancelar</button>
+          <button class="btn-salvar" onclick="salvarPessoa()">Salvar cadastro</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-overlay" id="modal-detalhe">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-nome">—</h3>
+      <button class="btn-fechar" onclick="fecharModal()">×</button>
+    </div>
+    <div id="modal-corpo"></div>
+    <button class="btn-excluir" onclick="excluirPessoa()">Excluir este cadastro</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// CONFIGURAÇÃO DO SUPABASE
+// Substitua os valores abaixo pelas suas credenciais
+// =============================================
+const SUPABASE_URL = "SUA_URL_AQUI";
+const SUPABASE_KEY = "SUA_CHAVE_ANON_AQUI";
+// =============================================
+
+const OPERADORES = { operador: "1234", admin: "admin123" };
+let operadorAtual = null;
+let pessoas = JSON.parse(localStorage.getItem("pessoas") || "[]");
+let pessoaSelecionadaIdx = null;
+let supabaseAtivo = SUPABASE_URL !== "SUA_URL_AQUI";
+
+function fazerLogin() {
+  const u = document.getElementById("login-user").value.trim();
+  const p = document.getElementById("login-pass").value;
+  if (OPERADORES[u] && OPERADORES[u] === p) {
+    operadorAtual = u;
+    document.getElementById("topbar-nome").textContent = u;
+    document.getElementById("login-error").style.display = "none";
+    document.getElementById("login-screen").classList.remove("active");
+    document.getElementById("app-screen").classList.add("active");
+    if (supabaseAtivo) {
+      document.getElementById("config-banner").style.display = "none";
+      carregarDoSupabase();
+    }
+    renderTabela();
+  } else {
+    document.getElementById("login-error").style.display = "block";
+  }
+}
+
+document.getElementById("login-pass").addEventListener("keydown", e => {
+  if (e.key === "Enter") fazerLogin();
+});
+
+function logout() {
+  operadorAtual = null;
+  document.getElementById("app-screen").classList.remove("active");
+  document.getElementById("login-screen").classList.add("active");
+  document.getElementById("login-user").value = "";
+  document.getElementById("login-pass").value = "";
+}
+
+function trocarAba(aba) {
+  document.querySelectorAll(".tab").forEach((t, i) =>
+    t.classList.toggle("active", (aba === "lista" && i === 0) || (aba === "cadastro" && i === 1))
+  );
+  document.getElementById("tab-lista").classList.toggle("active", aba === "lista");
+  document.getElementById("tab-cadastro").classList.toggle("active", aba === "cadastro");
+  if (aba === "lista") renderTabela();
+}
+
+function renderTabela(filtro = "") {
+  const tbody = document.getElementById("tabela-body");
+  const empty = document.getElementById("empty-state");
+  const lista = filtro
+    ? pessoas.filter(p => p.nome.toLowerCase().includes(filtro) || p.cpf.includes(filtro))
+    : pessoas;
+  if (!lista.length) { tbody.innerHTML = ""; empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  tbody.innerHTML = lista.map((p) => `
+    <tr onclick="abrirModal(${pessoas.indexOf(p)})">
+      <td>${p.nome}</td>
+      <td>${p.cpf}</td>
+      <td>${p.rg}</td>
+      <td>${p.telefone || "—"}</td>
+      <td><span class="badge-status">Ativo</span></td>
+    </tr>`).join("");
+}
+
+function filtrarPessoas() {
+  renderTabela(document.getElementById("busca").value.toLowerCase());
+}
+
+function salvarPessoa() {
+  const nome = document.getElementById("f-nome").value.trim();
+  const cpf  = document.getElementById("f-cpf").value.trim();
+  const rg   = document.getElementById("f-rg").value.trim();
+  const alerta = document.getElementById("form-alert");
+
+  if (!nome || !cpf || !rg) {
+    alerta.textContent = "Preencha os campos obrigatórios: nome, CPF e RG.";
+    alerta.className = "alert error";
+    alerta.style.display = "block";
+    return;
+  }
+
+  const pessoa = {
+    nome, cpf, rg,
+    nascimento:  document.getElementById("f-nascimento").value,
+    sexo:        document.getElementById("f-sexo").value,
+    telefone:    document.getElementById("f-telefone").value,
+    email:       document.getElementById("f-email").value,
+    cep:         document.getElementById("f-cep").value,
+    logradouro:  document.getElementById("f-logradouro").value,
+    numero:      document.getElementById("f-numero").value,
+    bairro:      document.getElementById("f-bairro").value,
+    complemento: document.getElementById("f-complemento").value,
+    cidade:      document.getElementById("f-cidade").value,
+    uf:          document.getElementById("f-uf").value,
+    operador:    operadorAtual,
+    cadastradoEm: new Date().toLocaleString("pt-BR")
+  };
+
+  pessoas.push(pessoa);
+  localStorage.setItem("pessoas", JSON.stringify(pessoas));
+  if (supabaseAtivo) salvarNoSupabase(pessoa);
+
+  alerta.textContent = "Cadastro salvo com sucesso!";
+  alerta.className = "alert success";
+  alerta.style.display = "block";
+  setTimeout(() => { alerta.style.display = "none"; limparFormulario(); trocarAba("lista"); }, 1500);
+}
+
+function limparFormulario() {
+  ["f-nome","f-cpf","f-rg","f-nascimento","f-telefone","f-email",
+   "f-cep","f-logradouro","f-numero","f-bairro","f-complemento","f-cidade","f-uf"]
+  .forEach(id => document.getElementById(id).value = "");
+  document.getElementById("f-sexo").value = "";
+}
+
+function abrirModal(idx) {
+  pessoaSelecionadaIdx = idx;
+  const p = pessoas[idx];
+  document.getElementById("modal-nome").textContent = p.nome;
+  const endereco = [p.logradouro, p.numero, p.complemento, p.bairro, p.cidade, p.uf]
+    .filter(Boolean).join(", ") || "—";
+  document.getElementById("modal-corpo").innerHTML = [
+    ["CPF", p.cpf], ["RG", p.rg],
+    ["Nascimento", p.nascimento || "—"], ["Sexo", p.sexo || "—"],
+    ["Telefone", p.telefone || "—"], ["E-mail", p.email || "—"],
+    ["Endereço", endereco], ["CEP", p.cep || "—"],
+    ["Cadastrado por", p.operador], ["Data/hora", p.cadastradoEm]
+  ].map(([l, v]) => `
+    <div class="detail-row">
+      <span class="detail-label">${l}</span>
+      <span class="detail-value">${v}</span>
+    </div>`).join("");
+  document.getElementById("modal-detalhe").classList.add("open");
+}
+
+function fecharModal() {
+  document.getElementById("modal-detalhe").classList.remove("open");
+}
+
+function excluirPessoa() {
+  if (pessoaSelecionadaIdx === null) return;
+  if (!confirm("Confirma a exclusão deste cadastro?")) return;
+  pessoas.splice(pessoaSelecionadaIdx, 1);
+  localStorage.setItem("pessoas", JSON.stringify(pessoas));
+  fecharModal();
+  renderTabela();
+}
+
+async function carregarDoSupabase() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/pessoas?select=*&order=created_at.desc`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    });
+    const data = await r.json();
+    if (Array.isArray(data)) { pessoas = data; renderTabela(); }
+  } catch(e) { console.error("Supabase:", e); }
+}
+
+async function salvarNoSupabase(pessoa) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/pessoas`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(pessoa)
+    });
+  } catch(e) { console.error("Supabase:", e); }
+}
+
+function mascaraCPF(el) {
+  let v = el.value.replace(/\D/g,"").slice(0,11);
+  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/,"$1.$2");
+  el.value = v;
+}
+
+function mascaraRG(el) {
+  let v = el.value.replace(/\D/g,"").slice(0,9);
+  if (v.length > 8) v = v.replace(/(\d{2})(\d{3})(\d{3})(\d{1})/,"$1.$2.$3-$4");
+  else if (v.length > 5) v = v.replace(/(\d{2})(\d{3})(\d{1,3})/,"$1.$2.$3");
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d{1,3})/,"$1.$2");
+  el.value = v;
+}
+
+function mascaraTel(el) {
+  let v = el.value.replace(/\D/g,"").slice(0,11);
+  if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/,"($1) $2-$3");
+  else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/,"($1) $2-$3");
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/,"($1) $2");
+  el.value = v;
+}
+
+function mascaraCEP(el) {
+  let v = el.value.replace(/\D/g,"").slice(0,8);
+  if (v.length > 5) v = v.replace(/(\d{5})(\d{1,3})/,"$1-$2");
+  el.value = v;
+}
+
+async function buscarCEP() {
+  const cep = document.getElementById("f-cep").value.replace(/\D/g,"");
+  if (cep.length !== 8) return;
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const d = await r.json();
+    if (!d.erro) {
+      document.getElementById("f-logradouro").value = d.logradouro || "";
+      document.getElementById("f-bairro").value     = d.bairro || "";
+      document.getElementById("f-cidade").value     = d.localidade || "";
+      document.getElementById("f-uf").value         = d.uf || "";
+    }
+  } catch(e) {}
+}
+</script>
+</body>
+</html>
